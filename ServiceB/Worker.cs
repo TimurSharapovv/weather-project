@@ -1,58 +1,48 @@
 using Confluent.Kafka;
 using ServiceC;
 
-namespace ServiceB
+namespace ServiceB;
+
+public class Worker(
+    Weather.WeatherClient grpcClient,
+    IConfiguration configuration,
+    ILogger<Worker> logger)
+    : BackgroundService
 {
-    public class Worker : BackgroundService
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        private readonly Weather.WeatherClient _grpcClient;
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<Worker> _logger;
-
-        public Worker(
-            Weather.WeatherClient grpcClient,
-            IConfiguration configuration,
-            ILogger<Worker> logger)
+        var config = new ConsumerConfig //todo вынести в другое место
         {
-            _grpcClient = grpcClient;
-            _configuration = configuration;
-            _logger = logger;
-        }
-
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+            BootstrapServers = configuration["Kafka:BootstrapServers"],
+            GroupId = "service-b-group",
+            AutoOffsetReset = AutoOffsetReset.Earliest
+        };
+        using var consumer = new ConsumerBuilder<string, byte[]>(config).Build();
+        consumer.Subscribe(configuration["Kafka:Topic"]);
+        try
         {
-            var config = new ConsumerConfig 
+            while (!stoppingToken.IsCancellationRequested)
             {
-                BootstrapServers = _configuration["Kafka:BootstrapServers"],
-                GroupId = "service-b-group",
-                AutoOffsetReset = AutoOffsetReset.Earliest
-            };
-            using var consumer = new ConsumerBuilder<string, byte[]>(config).Build();
-            consumer.Subscribe(_configuration["Kafka:Topic"]);
-            try 
-            {
-                while (!stoppingToken.IsCancellationRequested)
+                try
                 {
-                    try
-                    {
-                        var message = consumer.Consume(stoppingToken);
-                        if (message == null) continue;
-                        var res = Request.Parser.ParseFrom(message.Message.Value);
-                        await _grpcClient.SetWeatherAsync(res);
-                        _logger.LogInformation("�������� ��������� �� Kafka. �����������: {Temperature}, ���������: {Humidity}, ��������: {Description}, �����: {Time}",
-                            res.Temperature, res.Humidity, res.Description, res.Time);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, "Consume error occurred");
-                        await Task.Delay(1000, stoppingToken);
-                    }
+                    var message = consumer.Consume(stoppingToken);
+                    if (message == null) continue; //todo проверить. не уверен в необходимости данной строчки
+                    var response = Request.Parser.ParseFrom(message.Message.Value);
+                    await grpcClient.SetWeatherAsync(response, cancellationToken: stoppingToken);
+                    logger.LogInformation(
+                        "�������� ��������� �� Kafka. �����������: {Temperature}, ���������: {Humidity}, ��������: {Description}, �����: {Time}",
+                        response.Temperature, response.Humidity, response.Description, response.Time);
+                }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "Consume error occurred");
+                    await Task.Delay(1000, stoppingToken);
                 }
             }
-            finally
-            {
-                consumer.Close();  
-            }
+        }
+        finally // todo чем отличается от продюсера если там тожже юзинг
+        {
+            consumer.Close();
         }
     }
 }
