@@ -26,7 +26,6 @@ public class Worker(
                 try
                 {
                     var message = consumer.Consume(stoppingToken);
-                    if (message == null) continue; //todo проверить. не уверен в необходимости данной строчки
                     var response = Request.Parser.ParseFrom(message.Message.Value);
                     await grpcClient.SetWeatherAsync(response, cancellationToken: stoppingToken);
                     logger.LogInformation(
@@ -40,7 +39,7 @@ public class Worker(
                 }
             }
         }
-        finally // todo чем отличается от продюсера если там тожже юзинг
+        finally 
         {
             consumer.Close();
         }
