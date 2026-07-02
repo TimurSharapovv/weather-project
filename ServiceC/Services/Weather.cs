@@ -8,9 +8,12 @@ public class WeatherService(ConcurrentQueue<Request> queue) : Weather.WeatherBas
 {
     public override Task<Response> SetWeather(Request request, ServerCallContext context)
     {
-        queue.Enqueue(request);
-        if (queue.Count > 10)
-            queue.TryDequeue(out _);
-        return Task.FromResult(new Response { Success = true });
+        lock (queue) //fixed: блокируем доступ к очереди для обеспечения потокобезопасности
+        {
+            queue.Enqueue(request);
+            if (queue.Count > 10)
+                queue.TryDequeue(out _);
+            return Task.FromResult(new Response { Success = true });
+        }
     }
 }
