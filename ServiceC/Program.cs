@@ -4,7 +4,8 @@ using ServiceC.Services;
 
 var builder = WebApplication.CreateBuilder(args);
     
-//todo добавь свагги. сваггер плиз
+builder.Services.AddEndpointsApiExplorer();//навалили свагги
+builder.Services.AddSwaggerGen();
 
 builder.Services.AddControllers();
 
@@ -27,12 +28,14 @@ builder.WebHost.ConfigureKestrel(options =>
 
 var app = builder.Build();
 
+if (app.Environment.IsDevelopment())//еще немножечько свагги
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
 // Configure the HTTP request pipeline.
 app.MapGrpcService<WeatherService>();
-app.MapGet("/",
-    () =>
-        "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client," +
-        " visit: https://go.microsoft.com/fwlink/?linkid=2086909"); //todo это пиздец
 app.MapControllers();
 
 app.Run();
