@@ -82,15 +82,20 @@ public class Worker(
                 var response = JsonSerializer.Deserialize<OpenMeteoResponse>(weatherApiResponse, options);
                 if (response is null || response.Current is null || response.Current.Time is null)
                     throw new Exception("�� ������� ������ � ������!");
-
-                var weatherMessage = new Request //todo использовать модель прото для продюсинга имеет право на существование,\
-                                                 //но лучше создать отдельный дто и его отправлять в кафку 
+                var weatherdto = new WeatherDto
                 {
                     Temperature = (float)response.Current.Temperature2M,
                     Humidity = response.Current.RelativeHumidity2M,
                     Description = ConvertCode(response.Current.WeatherCode),
+                    Time = Convert.ToDateTime(response.Current.Time)
+                };
+                var weatherMessage = new Request 
+                {
+                    Temperature = weatherdto.Temperature,
+                    Humidity = Convert.ToInt32(weatherdto.Humidity),
+                    Description = weatherdto.Description,
                     Time = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(
-                        DateTime.SpecifyKind(DateTime.Parse(response.Current.Time), DateTimeKind.Utc))
+                        DateTime.SpecifyKind(weatherdto.Time, DateTimeKind.Utc))
                 };
                 await producer.ProduceAsync(cfg["Kafka:Topic"],
                     new Message<string, byte[]> { Key = "Kazan", Value = weatherMessage.ToByteArray() }, stoppingToken);
