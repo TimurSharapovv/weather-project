@@ -1,4 +1,7 @@
 ﻿using System.Collections.Concurrent;
+using ServiceC.DataBase;
+using Microsoft.EntityFrameworkCore;
+using ServiceC.Storage;
 
 namespace ServiceC.Extensions;
 
@@ -12,7 +15,18 @@ public static class ServiceC_Extensions
         services.AddControllers();
         
         services.AddGrpc();
-        services.AddSingleton<ConcurrentQueue<Request>>();
+        services.AddScoped<IWeatherStorage, WeatherStorageService>();
+        
+        return services;
+        
+    }
+
+    public static IServiceCollection AddDatabase(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddDbContext<AppDbContext>(options =>
+        {
+            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
+        });
         return services;
     }
 

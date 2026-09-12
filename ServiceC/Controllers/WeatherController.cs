@@ -1,17 +1,17 @@
-﻿using System.Collections.Concurrent;
+﻿using ServiceC.Storage;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ServiceC.Controllers;
 
 [ApiController]
 [Route("api/Weather")]
-public class WeatherController(ConcurrentQueue<Request> queue) : ControllerBase
+public class WeatherController(IWeatherStorage storage) : ControllerBase
 {
+    private readonly IWeatherStorage _storage = storage;
     [HttpGet]
-    public IEnumerable<Request> Get() 
+    public async Task<IActionResult> Get(CancellationToken cancellationToken = default)
     {
-        //todo с точки зрения архитектуры ты долежен складывать записи лучше в постгресс, но даже если и хранишь их в очереди, 
-        // то место обращения к ней должно быть не тут, а в классе типа interactor или другого паттерна (почитай) 
-        return queue.Reverse().Take(10);
+        var result = await _storage.GetLastRecordsAsync(10, cancellationToken);
+        return Ok(result);
     }
 }

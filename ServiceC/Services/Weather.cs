@@ -1,19 +1,15 @@
-﻿using System.Collections.Concurrent;
+﻿using ServiceC.Storage;
 using Grpc.Core;
 
 
 namespace ServiceC.Services;
 
-public class WeatherService(ConcurrentQueue<Request> queue) : Weather.WeatherBase
+public class WeatherService(IWeatherStorage storage) : Weather.WeatherBase
 {
-    public override Task<Response> SetWeather(Request request, ServerCallContext context)
+    private readonly IWeatherStorage _storage = storage;
+    public async override Task<Response> SetWeather(Request request, ServerCallContext context)
     {
-        lock (queue) //fixed: блокируем доступ к очереди для обеспечения потокобезопасности
-        {
-            queue.Enqueue(request);
-            if (queue.Count > 10)
-                queue.TryDequeue(out _);
-            return Task.FromResult(new Response { Success = true });
-        }
+        await _storage.SaveWeatherRecord(request, context.CancellationToken);
+        return new Response { Success = true };
     }
 }

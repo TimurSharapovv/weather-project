@@ -7,6 +7,8 @@ builder.Services.AddServiceC();
 
 builder.WebHost.ConfigureKestrel();
 
+builder.Services.AddDatabase(builder.Configuration);
+
 var app = builder.Build();
 
 app.ImplementSwagger();
