@@ -3,15 +3,16 @@ using ServiceC.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddServiceC();
+builder.Services.AddServiceC(builder.Configuration);
 
 builder.WebHost.ConfigureKestrel();
 
-builder.Services.AddDatabase(builder.Configuration);
 
 var app = builder.Build();
 
 app.ImplementSwagger();
+
+app.AddDataBase();
 
 app.MapGrpcService<WeatherService>();
 app.MapControllers();

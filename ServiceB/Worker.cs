@@ -35,7 +35,7 @@ public class Worker(
                 catch (Exception e)
                 {
                     logger.LogError(e, "Consume error occurred");
-                    await Task.Delay(10000, stoppingToken);
+                    await Task.Delay(60000, stoppingToken);
                 }
             }
         }

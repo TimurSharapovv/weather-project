@@ -1,13 +1,14 @@
-﻿using System.Collections.Concurrent;
+﻿using ServiceC.DataCleaning;
 using ServiceC.DataBase;
-using Microsoft.EntityFrameworkCore;
 using ServiceC.Storage;
+using ServiceC.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace ServiceC.Extensions;
 
 public static class ServiceC_Extensions
 {
-    public static IServiceCollection AddServiceC(this IServiceCollection services)
+    public static IServiceCollection AddServiceC(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
@@ -15,21 +16,21 @@ public static class ServiceC_Extensions
         services.AddControllers();
         
         services.AddGrpc();
-        services.AddScoped<IWeatherStorage, WeatherStorageService>();
+        services.AddScoped<IWeatherStorage, WeatherStorage>();
         
-        return services;
-        
-    }
+        services.AddScoped<IDataCleanupService, DataCleanupService>();
 
-    public static IServiceCollection AddDatabase(this IServiceCollection services, IConfiguration configuration)
-    {
         services.AddDbContext<AppDbContext>(options =>
         {
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
         });
+        
+        services.AddHostedService<DataCleaner>();
+        
         return services;
+        
     }
-
+    
     public static ConfigureWebHostBuilder ConfigureKestrel(this ConfigureWebHostBuilder kestrel)
     {
         kestrel.ConfigureKestrel(options =>
@@ -53,6 +54,17 @@ public static class ServiceC_Extensions
         {
             app.UseSwagger();
             app.UseSwaggerUI();
+        }
+        return app;
+    }
+
+    public static WebApplication AddDataBase(this WebApplication app)
+    {
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            db.Database.EnsureCreated();
         }
         return app;
     }

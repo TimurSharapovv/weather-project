@@ -87,7 +87,7 @@ public class Worker(
                     Temperature = (float)response.Current.Temperature2M,
                     Humidity = response.Current.RelativeHumidity2M,
                     Description = ConvertCode(response.Current.WeatherCode),
-                    Time = Convert.ToDateTime(response.Current.Time)
+                    Time =  DateTime.Now.ToString("g")
                 };
                 var weatherMessage = new Request 
                 {
@@ -95,14 +95,14 @@ public class Worker(
                     Humidity = Convert.ToInt32(weatherdto.Humidity),
                     Description = weatherdto.Description,
                     Time = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(
-                        DateTime.SpecifyKind(weatherdto.Time, DateTimeKind.Utc))
+                        DateTime.SpecifyKind(Convert.ToDateTime(weatherdto.Time), DateTimeKind.Utc))
                 };
                 await producer.ProduceAsync(cfg["Kafka:Topic"],
                     new Message<string, byte[]> { Key = "Kazan", Value = weatherMessage.ToByteArray() }, stoppingToken);
                 logger.LogInformation("����� ������ - {Temperature}, {Humidity}, {Description}, {Time}",
                     weatherMessage.Temperature, weatherMessage.Humidity, weatherMessage.Description,
                     weatherMessage.Time);
-                await Task.Delay(10000, stoppingToken);
+                await Task.Delay(60000, stoppingToken);
             }
             catch (Exception e)
             {
