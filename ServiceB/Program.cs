@@ -1,20 +1,8 @@
-using ServiceB;
-using ServiceC;
+using ServiceB.Extensions;
 
 var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddHostedService<Worker>();
-builder.Services.AddGrpcClient<Weather.WeatherClient>(options =>
-    {
-        options.Address = new Uri("http://localhost:5292");
-    })
-    .ConfigureChannel(channel =>
-    {
-        channel.HttpHandler = new SocketsHttpHandler
-        {
-            EnableMultipleHttp2Connections = true,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(10)
-        };
-    });
+
+builder.Services.AddServiceB();
 
 var host = builder.Build();
 host.Run();
