@@ -1,21 +1,17 @@
-﻿using System.Collections.Concurrent;
+﻿using ServiceC.Storage;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ServiceC.Controllers
+namespace ServiceC.Controllers;
+
+[ApiController]
+[Route("api/Weather")]
+public class WeatherController(IWeatherStorage storage) : ControllerBase
 {
-    [ApiController]
-    [Route("api/Weather")]
-    public class WeatherController : ControllerBase
+    private readonly IWeatherStorage _storage = storage;
+    [HttpGet]
+    public async Task<IActionResult> Get(CancellationToken cancellationToken = default)
     {
-        private readonly ConcurrentQueue<Request> _que;
-        public WeatherController(ConcurrentQueue<Request> q)
-        {
-            _que = q;
-        }
-        [HttpGet]
-        public IEnumerable<Request> Get() 
-        {
-            return _que.Reverse().Take(10);
-        }
+        var result = await _storage.GetLastRecordsAsync(10, cancellationToken);
+        return Ok(result);
     }
 }

@@ -1,25 +1,15 @@
-﻿using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
+﻿using ServiceC.Storage;
 using Grpc.Core;
-using ServiceC;
 
 
 namespace ServiceC.Services;
 
-public class WeatherService : Weather.WeatherBase
+public class WeatherService(IWeatherStorage storage) : Weather.WeatherBase
 {
-    private readonly ConcurrentQueue<Request> _que;
-    public WeatherService(ConcurrentQueue<Request> q)
+    private readonly IWeatherStorage _storage = storage;
+    public async override Task<Response> SetWeather(Request request, ServerCallContext context)
     {
-        _que = q;
-    }
-    public override Task<Response> SetWeather(Request request, ServerCallContext context)
-    {
-        _que.Enqueue(request);
-        if (_que.Count > 10) 
-        {
-            _que.TryDequeue(out var _);
-        }
-        return Task.FromResult(new Response { Success = true });
+        await _storage.SaveWeatherRecord(request, context.CancellationToken);
+        return new Response { Success = true };
     }
 }
