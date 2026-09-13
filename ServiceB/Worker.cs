@@ -1,4 +1,5 @@
 using Confluent.Kafka;
+using ServiceB.Extensions;
 using ServiceC;
 
 namespace ServiceB;
@@ -9,15 +10,10 @@ public class Worker(
     ILogger<Worker> logger)
     : BackgroundService
 {
+    private readonly ILogger<Worker> _logger = logger;
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var config = new ConsumerConfig //todo вынести в другое место
-        {
-            BootstrapServers = configuration["Kafka:BootstrapServers"],
-            GroupId = "service-b-group",
-            AutoOffsetReset = AutoOffsetReset.Earliest
-        };
-        using var consumer = new ConsumerBuilder<string, byte[]>(config).Build();
+        using var consumer = new ConsumerBuilder<string, byte[]>(ServiceB_Extensions.GetConfig(configuration)).Build();
         consumer.Subscribe(configuration["Kafka:Topic"]);
         try
         {
@@ -28,13 +24,13 @@ public class Worker(
                     var message = consumer.Consume(stoppingToken);
                     var response = Request.Parser.ParseFrom(message.Message.Value);
                     await grpcClient.SetWeatherAsync(response, cancellationToken: stoppingToken);
-                    logger.LogInformation(
+                    _logger.LogInformation(
                         "�������� ��������� �� Kafka. �����������: {Temperature}, ���������: {Humidity}, ��������: {Description}, �����: {Time}",
                         response.Temperature, response.Humidity, response.Description, response.Time);
                 }
                 catch (Exception e)
                 {
-                    logger.LogError(e, "Consume error occurred");
+                    _logger.LogError(e, "Consume error occurred");
                     await Task.Delay(60000, stoppingToken);
                 }
             }

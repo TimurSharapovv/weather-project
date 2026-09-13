@@ -1,4 +1,5 @@
-﻿using ServiceC;
+﻿using Confluent.Kafka;
+using ServiceC;
 
 namespace ServiceB.Extensions;
 
@@ -21,5 +22,16 @@ public static class ServiceB_Extensions
             });
 
         return services;
+    }
+
+    public static ConsumerConfig GetConfig(this IConfiguration configuration)
+    {
+        var config = new ConsumerConfig 
+        {
+            BootstrapServers = configuration["Kafka:BootstrapServers"],
+            GroupId = "service-b-group",
+            AutoOffsetReset = AutoOffsetReset.Earliest
+        };
+        return config;
     }
 }

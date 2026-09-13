@@ -31,7 +31,7 @@ services:
     container_name: postgres_weather
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_password_123
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: weather_db
     ports:
       - "5432:5432"

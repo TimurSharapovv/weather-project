@@ -2,6 +2,7 @@ using System.Text.Json;
 using Confluent.Kafka;
 using Google.Protobuf;
 using ServiceA.Models;
+using ServiceA.Extensions;
 using ServiceC;
 
 namespace ServiceA;
@@ -9,66 +10,22 @@ namespace ServiceA;
 public class Worker(
     ILogger<Worker> logger,
     IHttpClientFactory httpclient,
-    IConfiguration cfg)
+    IConfiguration configuration)
     : BackgroundService
 {
-    private static readonly Dictionary<int, string> Code = new()
-    {
-        { 0, "Clear sky" },
-        { 1, "Mainly clear" },
-        { 2, "Partly cloudy" },
-        { 3, "Overcast" },
-        { 45, "Fog" },
-        { 48, "Depositing rime fog" },
-        { 51, "Drizzle: Light intensity" },
-        { 53, "Drizzle: Moderate intensity" },
-        { 55, "Drizzle: Dense intensity" },
-        { 56, "Freezing Drizzle: Light intensity" },
-        { 57, "Freezing Drizzle: Dense intensity" },
-        { 61, "Rain: Slight intensity" },
-        { 63, "Rain: Moderate intensity" },
-        { 65, "Rain: Heavy intensity" },
-        { 66, "Freezing Rain: Light intensity" },
-        { 67, "Freezing Rain: Heavy intensity" },
-        { 71, "Snow fall: Slight intensity" },
-        { 73, "Snow fall: Moderate intensity" },
-        { 75, "Snow fall: Heavy intensity" },
-        { 77, "Snow grains" },
-        { 80, "Rain showers: Slight intensity" },
-        { 81, "Rain showers: Moderate intensity" },
-        { 82, "Rain showers: Violent intensity" },
-        { 85, "Snow showers: Slight intensity" },
-        { 86, "Snow showers: Heavy intensity" },
-        { 95, "Thunderstorm: Slight or moderate" },
-        { 96, "Thunderstorm with slight hail" },
-        { 99, "Thunderstorm with heavy hail" }
-    };
-
-    private static string ConvertCode(int num)
-    {
-        Code.TryGetValue(num, out var result);
-        return result ?? "";
-    }
-
+    private readonly ILogger<Worker> _logger = logger;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var config = new ProducerConfig
-        {
-            BootstrapServers = cfg["Kafka:BootstrapServers"]
-        };
-        using var producer = new ProducerBuilder<string, byte[]>(config).Build();
+        using var producer = new ProducerBuilder<string, byte[]>(ServiceA_Extensions.GetConfig(configuration)).Build();
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 var req = httpclient.CreateClient("OpenMeteo");
-                var url =
-                    $"{cfg["Open-Meteo:BaseUrl"]}?latitude={cfg["Open-Meteo:Latitude"]}" +
-                    $"&longitude={cfg["Open-Meteo:Longitude"]}" +
-                    $"&current={cfg["Open-Meteo:CurrentWeather"]}";
+                var url = ServiceA_Extensions.GetEndpoit(configuration);
 
-                logger.LogInformation("Requesting URL: {Url}", url);
+                _logger.LogInformation("Requesting URL: {Url}", url);
 
                 var weather = await req.GetAsync(url, stoppingToken);
                 if (weather.IsSuccessStatusCode == false)
@@ -86,7 +43,7 @@ public class Worker(
                 {
                     Temperature = (float)response.Current.Temperature2M,
                     Humidity = response.Current.RelativeHumidity2M,
-                    Description = ConvertCode(response.Current.WeatherCode),
+                    Description = ServiceA_Extensions.ConvertCode(response.Current.WeatherCode),
                     Time =  DateTime.Now.ToString("g")
                 };
                 var weatherMessage = new Request 
@@ -97,16 +54,16 @@ public class Worker(
                     Time = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(
                         DateTime.SpecifyKind(Convert.ToDateTime(weatherdto.Time), DateTimeKind.Utc))
                 };
-                await producer.ProduceAsync(cfg["Kafka:Topic"],
+                await producer.ProduceAsync(configuration["Kafka:Topic"],
                     new Message<string, byte[]> { Key = "Kazan", Value = weatherMessage.ToByteArray() }, stoppingToken);
-                logger.LogInformation("����� ������ - {Temperature}, {Humidity}, {Description}, {Time}",
+                _logger.LogInformation("����� ������ - {Temperature}, {Humidity}, {Description}, {Time}",
                     weatherMessage.Temperature, weatherMessage.Humidity, weatherMessage.Description,
                     weatherMessage.Time);
                 await Task.Delay(60000, stoppingToken);
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Consume error occurred");
+                _logger.LogError(e, "Consume error occurred");
                 await Task.Delay(1000, stoppingToken);
             }
         }
