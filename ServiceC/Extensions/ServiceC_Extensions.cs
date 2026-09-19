@@ -1,45 +1,60 @@
 ﻿using ServiceC.DataCleaning;
 using ServiceC.DataBase;
 using ServiceC.Storage;
-using ServiceC.Services;
 using Microsoft.EntityFrameworkCore;
+using ServiceC.Services;
 
 namespace ServiceC.Extensions;
 
 public static class ServiceC_Extensions
 {
-    public static IServiceCollection AddServiceC(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddWeatherRestApi(this IServiceCollection services)
     {
+        services.AddControllers();
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
-
-        services.AddControllers();
-        
+        return services;
+    }
+    
+    public static IServiceCollection AddWeatherGrpcServer(this IServiceCollection services)
+    {
         services.AddGrpc();
-        services.AddScoped<IWeatherStorage, WeatherStorage>();
-        
-        services.AddScoped<IDataCleanupService, DataCleanupService>();
-
+        return services;
+    }
+    
+    public static IServiceCollection AddWeatherDatabase(this IServiceCollection services, IConfiguration configuration)
+    {
         services.AddDbContext<AppDbContext>(options =>
         {
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
         });
-        
-        services.AddHostedService<DataCleaner>();
-        
         return services;
-        
     }
     
-    public static ConfigureWebHostBuilder ConfigureKestrel(this ConfigureWebHostBuilder kestrel)
+    public static IServiceCollection AddWeatherStorage(this IServiceCollection services)
+    {
+        services.AddScoped<IWeatherStorage, WeatherStorage>();
+        return services;
+    }
+    
+    public static IServiceCollection AddDataCleanup(this IServiceCollection services)
+    {
+        services.AddScoped<IDataCleanupService, DataCleanupService>();
+        services.AddHostedService<DataCleaner>();
+        return services;
+    }
+    
+    public static ConfigureWebHostBuilder ConfigureWeatherKestrel(this ConfigureWebHostBuilder  kestrel)
     {
         kestrel.ConfigureKestrel(options =>
         {
-            // ���� ��� REST API (HTTP/1.1)
-            options.ListenLocalhost(5291,
-                listenOptions => { listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; });
+            // Порт для REST API
+            options.ListenLocalhost(5291, listenOptions => 
+            { 
+                listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; 
+            });
 
-            // ���� ��� gRPC (HTTPS + HTTP/2)
+            // Порт для gRPC
             options.ListenLocalhost(5292, listenOptions =>
             {
                 listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2;
@@ -47,25 +62,25 @@ public static class ServiceC_Extensions
         });
         return kestrel;
     }
-
-    public static WebApplication ImplementSwagger(this WebApplication app)
+    
+    public static WebApplication UseSwagger(this WebApplication app)
     {
         if (app.Environment.IsDevelopment())
         {
-            app.UseSwagger();
+            SwaggerBuilderExtensions.UseSwagger(app);
             app.UseSwaggerUI();
         }
         return app;
     }
 
-    public static WebApplication AddDataBase(this WebApplication app)
-    {
-        using (var scope = app.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            db.Database.EnsureCreated();
-        }
+    public static WebApplication InitializeWeatherDatabase(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
+        db.Database.EnsureCreated(); 
+        
         return app;
     }
 }

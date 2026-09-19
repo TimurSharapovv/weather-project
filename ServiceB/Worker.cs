@@ -25,7 +25,7 @@ public class Worker(
                     var response = Request.Parser.ParseFrom(message.Message.Value);
                     await grpcClient.SetWeatherAsync(response, cancellationToken: stoppingToken);
                     _logger.LogInformation(
-                        "�������� ��������� �� Kafka. �����������: {Temperature}, ���������: {Humidity}, ��������: {Description}, �����: {Time}",
+                        "Got new data from Kafka. Temperature: {Temperature}, Humidity: {Humidity}, Description: {Description}, Time: {Time}",
                         response.Temperature, response.Humidity, response.Description, response.Time);
                 }
                 catch (Exception e)

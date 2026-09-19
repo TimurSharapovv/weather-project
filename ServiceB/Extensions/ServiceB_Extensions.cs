@@ -5,9 +5,8 @@ namespace ServiceB.Extensions;
 
 public static class ServiceB_Extensions
 {
-    public static IServiceCollection AddServiceB(this IServiceCollection services)
+    public static IServiceCollection AddWeatherGrpcClient(this IServiceCollection services)
     {
-        services.AddHostedService<Worker>();
         services.AddGrpcClient<Weather.WeatherClient>(options =>
             {
                 options.Address = new Uri("http://localhost:5292");
@@ -23,6 +22,12 @@ public static class ServiceB_Extensions
 
         return services;
     }
+    
+    public static IServiceCollection AddWeatherWorker(this IServiceCollection services)
+    {
+        services.AddHostedService<Worker>();
+        return services;
+    }
 
     public static ConsumerConfig GetConfig(this IConfiguration configuration)
     {
@@ -34,4 +39,5 @@ public static class ServiceB_Extensions
         };
         return config;
     }
+    
 }

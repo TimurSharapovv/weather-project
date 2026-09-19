@@ -1,20 +1,26 @@
 using ServiceC.Extensions;
 using ServiceC.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder();
 
-builder.Services.AddServiceC(builder.Configuration);
 
-builder.WebHost.ConfigureKestrel();
+builder.WebHost.ConfigureWeatherKestrel();
+
+builder.Services
+    .AddWeatherRestApi()
+    .AddWeatherGrpcServer()
+    .AddWeatherDatabase(builder.Configuration)
+    .AddWeatherStorage()
+    .AddDataCleanup();
+
 
 
 var app = builder.Build();
 
-app.ImplementSwagger();
+app.InitializeWeatherDatabase()
+    .UseSwagger();
 
-app.AddDataBase();
-
-app.MapGrpcService<WeatherService>();
 app.MapControllers();
+app.MapGrpcService<WeatherService>();
 
 app.Run();

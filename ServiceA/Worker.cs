@@ -23,13 +23,13 @@ public class Worker(
             try
             {
                 var req = httpclient.CreateClient("OpenMeteo");
-                var url = ServiceA_Extensions.GetEndpoit(configuration);
+                var url = WeatherApiUtils.GetEndpoint(configuration);
 
                 _logger.LogInformation("Requesting URL: {Url}", url);
 
                 var weather = await req.GetAsync(url, stoppingToken);
                 if (weather.IsSuccessStatusCode == false)
-                    throw new Exception("������ � API ���������!");
+                    throw new Exception("Couldn't get response from API!");
 
                 var weatherApiResponse = await weather.Content.ReadAsStringAsync(stoppingToken);
                 var options = new JsonSerializerOptions
@@ -38,12 +38,12 @@ public class Worker(
                 };
                 var response = JsonSerializer.Deserialize<OpenMeteoResponse>(weatherApiResponse, options);
                 if (response is null || response.Current is null || response.Current.Time is null)
-                    throw new Exception("�� ������� ������ � ������!");
+                    throw new Exception("Weather API response is empty or incomplete (Current or Time is null).");
                 var weatherdto = new WeatherDto
                 {
                     Temperature = (float)response.Current.Temperature2M,
                     Humidity = response.Current.RelativeHumidity2M,
-                    Description = ServiceA_Extensions.ConvertCode(response.Current.WeatherCode),
+                    Description = WeatherApiUtils.ConvertCode(response.Current.WeatherCode),
                     Time =  DateTime.Now.ToString("g")
                 };
                 var weatherMessage = new Request 
@@ -56,7 +56,7 @@ public class Worker(
                 };
                 await producer.ProduceAsync(configuration["Kafka:Topic"],
                     new Message<string, byte[]> { Key = "Kazan", Value = weatherMessage.ToByteArray() }, stoppingToken);
-                _logger.LogInformation("����� ������ - {Temperature}, {Humidity}, {Description}, {Time}",
+                _logger.LogInformation("New weather entry - {Temperature}, {Humidity}, {Description}, {Time}",
                     weatherMessage.Temperature, weatherMessage.Humidity, weatherMessage.Description,
                     weatherMessage.Time);
                 await Task.Delay(60000, stoppingToken);
