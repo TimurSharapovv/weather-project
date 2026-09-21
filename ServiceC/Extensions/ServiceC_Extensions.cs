@@ -10,7 +10,11 @@ public static class ServiceC_Extensions
 {
     public static IServiceCollection AddWeatherRestApi(this IServiceCollection services)
     {
-        services.AddControllers();
+        services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.WriteIndented = true;
+            });
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
         return services;
