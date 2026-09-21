@@ -96,3 +96,5 @@
 **Пример полученных записей:**
 
 <img width="367" height="622" alt="image" src="https://github.com/user-attachments/assets/e2a5c2d3-607d-4c3c-9fb6-3271ac05014d" />
+
+## 🤝 PS: спасибо брату за ревью моего проекта!
