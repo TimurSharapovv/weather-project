@@ -25,7 +25,7 @@
 
 ## 🛠️ Стек технологий
 
-**C# 12** | **.NET 9** | **ASP.NET Core** | **gRPC** | **REST API** | **Apache Kafka** | **PostgreSQL** | **Entity Framework Core** | **Docker Compose** | **Swagger**
+**C# 12** | **.NET 9** | **ASP.NET Core** | **gRPC** | **REST API** | **Apache Kafka** | **PostgreSQL** | **Entity Framework Core** | **Docker** | **Swagger**
 
 ---
 
